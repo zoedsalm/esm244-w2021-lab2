@@ -1,0 +1,171 @@
+---
+title: "ESM 244 Lab Week 2"
+author: "Allison Horst"
+output: html_document
+---
+
+### Attach required packages:
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(janitor)
+library(here)
+
+
+# For Part 1 (PCA)
+library(ggfortify) # For PCA biplot
+library(palmerpenguins)
+
+# For Part 2 (ggplot customization)
+library(readxl)
+library(ggrepel) # For repulsive data labels
+library(gghighlight) # For useful highlighting
+library(lubridate) # For easier dates & times
+library(paletteer) # A whole bunch of color palettes in one place
+library(plotly) # Interactive graphs
+
+# For Part 3 (compound figures)
+library(patchwork)
+```
+
+### Part 1: Principal components analysis (PCA)
+
+Principal components analysis is an ordination method allowing us to glean as much about our multivariate data as possible in a simplified number of dimensions. 
+
+Here, we'll use the `penguins` data within the `palmerpenguins` R package to explore variable relationships and clustering by species in a PCA biplot. For this example with PCA, we will only use the structure size measurements (bill length and depth, mass, and flipper length).
+
+```{r}
+penguin_pca <- penguins %>% 
+  dplyr::select(body_mass_g, ends_with("_mm")) %>%
+  tidyr::drop_na() %>%
+  scale() %>%
+  prcomp()
+
+penguin_complete <- penguins %>% 
+  drop_na(body_mass_g, ends_with("_mm"))
+
+autoplot(penguin_pca,
+         data = penguin_complete,
+         loadings = TRUE,
+         colour = 'species',
+         loadings.label = TRUE,
+         loadings.colour = "black",
+         loadings.label.colour = "black",
+         loadings.label.vjust = -0.5
+         ) +
+  scale_color_manual(values = c("blue","purple","orange")) +
+  scale_fill_manual(values = c("blue","purple","orange")) +
+  theme_minimal()
+
+# It's not perfect, but it's enough for now...
+
+```
+
+### Part 2: `ggplot` customization & reading in different file types
+
+We spent some time in ESM 206 customizing our data visualizations. Let's add some more tools, including: 
+- Highlight spaghetti plots with `gghighlight`
+- An interactive graph with `plotly`
+- A universe of color palettes in `paletteer`
+
+Here, we'll also read in stored .txt and .xlsx, and files from a URL to build our toolkit for how to read in data.
+
+**Data:** NOAA [Foreign Fisheries Trade Data](https://www.fisheries.noaa.gov/national/sustainable-fisheries/foreign-fishery-trade-data) 
+
+#### Read in a .xlsx file, & do some wrangling
+
+```{r}
+fish_noaa <- read_excel(here("data","foss_landings.xlsx")) %>% 
+  clean_names() %>% 
+  mutate(across(where(is.character), tolower)) %>% # convert all characters to lowercase 
+  mutate(nmfs_name = str_sub(nmfs_name, end = -4)) %>%  # remove last 3 characters
+  filter(confidentiality == "public")
+```
+
+Now, let's make and customize a graph: 
+
+```{r}
+fish_plot <- ggplot(data = fish_noaa, aes(x = year, y = pounds, group = nmfs_name)) +
+  geom_line(aes(color = nmfs_name)) +
+  theme_minimal()
+
+# Make it interactive:
+ggplotly(fish_plot)
+
+# Highlight series based on condition(s):
+ggplot(data = fish_noaa, aes(x = year, y = pounds, group = nmfs_name)) +
+  geom_line() +
+  gghighlight(nmfs_name == "tunas") + # Highlight just tunas
+  theme_minimal()
+
+ggplot(data = fish_noaa, aes(x = year, y = pounds, group = nmfs_name)) +
+  geom_line(aes(color = nmfs_name)) +
+  gghighlight(max(pounds) > 1e8) + # Highlight just tunas
+  theme_minimal()
+```
+
+#### Read in data from a URL, `lubridate()` refresher, and introducing `paletteer` for color palettes
+
+- See paletteer color palettes:
+- Discrete with `View(palettes_d_names)`
+- Continuous with `View(palettes_c_names)`
+
+**Data:** Monroe Water Treatment Plant Daily Electricity Use
+
+Accessed from [data.gov](https://catalog.data.gov/dataset/monroe-water-treatment-plant-energy-and-water-consumption/resource/5afc8aa7-b485-4173-bcc6-c56270efedb8)
+
+Summary: "Daily energy use (kWh), demand (kW), and volume water treated (million gallons). 2010 through current. A second electric meter and account were added at the plant in March 2013. The usage and demand data from this meter are labeled as "Energy Use 2" and "Peak 2."
+
+The URL to the CSV file is provided at the website above (or copy from below):
+
+```{r}
+monroe_wt <- read_csv("https://data.bloomington.in.gov/dataset/2c81cfe3-62c2-46ed-8fcf-83c1880301d1/resource/13c8f7aa-af51-4008-80a9-56415c7c931e/download/mwtpdailyelectricitybclear.csv") %>% 
+  clean_names()
+
+monroe_ts <- monroe_wt %>% 
+  mutate(date = mdy(date)) %>% # Convert date to a stored date class
+  mutate(record_month = month(date)) %>% # Add column w/ month number
+  mutate(month_name = month.abb[record_month]) %>% # Add column w/ month abbreviation
+  mutate(month_name = fct_reorder(month_name, record_month)) # Make month name a factor & reorder based on values in record_month column
+
+ggplot(data = monroe_ts, aes(x = month_name, y = total_k_wh)) +
+  geom_jitter(aes(color = month_name), 
+              show.legend = FALSE,
+              alpha = 0.5, 
+              size = 0.3,
+              width = 0.2) +
+  scale_color_paletteer_d("palettetown::delibird")
+```
+
+### Part 3: `patchwork` for compound figures
+
+Let's make two quick graphs, & store them. Then combine using `patchwork`. See more information about the `patchwork` package [HERE](https://patchwork.data-imaginist.com/). 
+
+```{r}
+graph_a <- ggplot(data = penguins, aes(x = body_mass_g, y = flipper_length_mm)) +
+  geom_point(aes(size = bill_length_mm, color = bill_depth_mm), show.legend = FALSE) +
+  scale_color_paletteer_c("grDevices::RdBu")
+
+graph_b <- ggplot(data = penguins, aes(x = species, y = flipper_length_mm)) +
+  geom_jitter(aes(color = flipper_length_mm), show.legend = FALSE)
+
+# Use | to put graphs side by side, and / to put one over the other. 
+graph_a | graph_b
+
+# Store the output, apply updates across all graphs with &
+graph_c <- graph_a / graph_b & theme_minimal()
+
+# Export as a .png with ggsave:
+ggsave(here("fig","graph_c.png"), width = 5, height = 5)
+
+# Get even wilder (not a real example):
+graph_c | graph_a
+
+# Or something like: 
+
+(graph_a | graph_b | graph_a) / (graph_b | graph_a) & theme_dark()
+```
+
+
