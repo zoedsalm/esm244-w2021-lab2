@@ -168,4 +168,4 @@ graph_c | graph_a
 (graph_a | graph_b | graph_a) / (graph_b | graph_a) & theme_dark()
 ```
 
-
+### Part 4: Shiny app basics (see app_demo folder)
