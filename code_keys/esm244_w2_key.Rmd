@@ -83,7 +83,7 @@ Here, we'll also read in stored .txt and .xlsx, and files from a URL to build ou
 fish_noaa <- read_excel(here("data","foss_landings.xlsx")) %>% 
   clean_names() %>% 
   mutate(across(where(is.character), tolower)) %>% # convert all characters to lowercase 
-  mutate(nmfs_name = str_sub(nmfs_name, end = -4)) %>%  # remove last 3 characters
+  mutate(nmfs_name = str_sub(nmfs_name, end = -4)) %>%  # remove last 4 characters
   filter(confidentiality == "public")
 ```
 
