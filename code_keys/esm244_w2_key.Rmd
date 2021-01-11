@@ -20,10 +20,8 @@ library(palmerpenguins)
 
 # For Part 2 (ggplot customization)
 library(readxl)
-library(ggrepel) # For repulsive data labels
 library(gghighlight) # For useful highlighting
 library(lubridate) # For easier dates & times
-library(paletteer) # A whole bunch of color palettes in one place
 library(plotly) # Interactive graphs
 
 # For Part 3 (compound figures)
@@ -61,6 +59,12 @@ autoplot(penguin_pca,
 
 # It's not perfect, but it's enough for now...
 
+# Variance explained by each PC
+screeplot(penguin_pca, type = "lines")
+
+# See the loadings (weighting for each principal component)
+penguin_pca$rotation
+
 ```
 
 ### Part 2: `ggplot` customization & reading in different file types
@@ -68,7 +72,6 @@ autoplot(penguin_pca,
 We spent some time in ESM 206 customizing our data visualizations. Let's add some more tools, including: 
 - Highlight spaghetti plots with `gghighlight`
 - An interactive graph with `plotly`
-- A universe of color palettes in `paletteer`
 
 Here, we'll also read in stored .txt and .xlsx, and files from a URL to build our toolkit for how to read in data.
 
@@ -106,7 +109,7 @@ ggplot(data = fish_noaa, aes(x = year, y = pounds, group = nmfs_name)) +
   theme_minimal()
 ```
 
-#### Read in data from a URL, `lubridate()` refresher, and introducing `paletteer` for color palettes
+#### Read in data from a URL, `lubridate()` refresher, `mutate()` as a workhorse to transform variables
 
 - See paletteer color palettes:
 - Discrete with `View(palettes_d_names)`
@@ -135,8 +138,7 @@ ggplot(data = monroe_ts, aes(x = month_name, y = total_k_wh)) +
               show.legend = FALSE,
               alpha = 0.5, 
               size = 0.3,
-              width = 0.2) +
-  scale_color_paletteer_d("palettetown::delibird")
+              width = 0.2)
 ```
 
 ### Part 3: `patchwork` for compound figures
@@ -145,8 +147,7 @@ Let's make two quick graphs, & store them. Then combine using `patchwork`. See m
 
 ```{r}
 graph_a <- ggplot(data = penguins, aes(x = body_mass_g, y = flipper_length_mm)) +
-  geom_point(aes(size = bill_length_mm, color = bill_depth_mm), show.legend = FALSE) +
-  scale_color_paletteer_c("grDevices::RdBu")
+  geom_point(aes(size = bill_length_mm, color = bill_depth_mm), show.legend = FALSE)
 
 graph_b <- ggplot(data = penguins, aes(x = species, y = flipper_length_mm)) +
   geom_jitter(aes(color = flipper_length_mm), show.legend = FALSE)
