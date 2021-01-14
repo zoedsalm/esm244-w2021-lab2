@@ -1,0 +1,60 @@
+---
+title: "ESM 244 lab 2"
+author: "Bren Comms Department"
+date: "1/14/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(janitor)
+library(palmerpenguins)
+library(here)
+
+# For PCA:
+library(ggfortify)
+
+# For ggplot customization:
+library(readxl)
+library(gghighlight)
+library(lubridate)
+library(plotly)
+
+#To make compound figures:
+library(patchwork)
+```
+
+## Part 1: PCA with Penguins
+
+```{r}
+penguin_pca <- penguins %>% 
+  select(body_mass_g, ends_with("_mm")) %>%  #body mass + any that end with mm
+  drop_na() %>%  #can add specific variables here, this drops all NAs across the df
+  scale() %>% #to scale variabes--not original values anymore
+  prcomp() #run principal components
+
+#see what a list contains [type list$... contents will pop up]
+penguin_pca$rotation
+
+# create a biplot of penguin_pca list
+# use autoplot fxn (creates the type of plot it assumes you want to make)
+autoplot(penguin_pca)+
+  theme_minimal()
+
+# BUT WAIT: We want to distinguish these points aesthetically based on other variables too!
+# create dataset where observations include what is necessary for the biplot, but still contain other info
+penguin_complete <- penguins %>% 
+  drop_na(body_mass_g, ends_with("_mm")) #making datasest from penguins with same observations, but also includes other variables not included in PCAAA
+
+autoplot(penguin_pca,
+         data = penguin_complete,
+         colour = "species",
+         loadings = TRUE,
+         loadings.label = TRUE)+
+  theme_minimal() # ggplot codes still work!
+
+# Can see that Adelie and Chinstrap overlap heavily in multivariate space
+```
+
